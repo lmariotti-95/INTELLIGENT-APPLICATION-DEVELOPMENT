@@ -101,14 +101,6 @@ let move c n =
 				   with UnvalidPosition -> aux rest in
 aux [move_up_rg; move_rg_up; move_rg_dn; move_dn_rg; move_dn_lf; move_lf_dn; move_lf_up; move_up_lf];;
 
-let move c n =
-  let rec aux = function
-    | [] -> []
-    | f::rest ->
-      try (f c n)::(aux rest)
-      with UnvalidPosition -> aux rest in
-aux [move_up_rg; move_rg_up; move_rg_dn; move_dn_rg; move_dn_lf; move_lf_dn; move_lf_up; move_up_lf];;
-
 (* 
 -----------------------------------------------------
 	BFS - Breadth  First Search
