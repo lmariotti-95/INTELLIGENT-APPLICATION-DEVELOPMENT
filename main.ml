@@ -1,5 +1,6 @@
 type 'a graph = Graph of ('a->'a list);;
 type cell = Cell of (int * int);;
+type weight = Weight of (cell * int);; (* Warnsdorff *)
 
 (* 
 -----------------------------------------------------
@@ -134,6 +135,47 @@ aux [move_up_rg; move_rg_up; move_rg_dn; move_dn_rg; move_dn_lf; move_lf_dn; mov
 
 (* 
 -----------------------------------------------------
+	Definizione della funzione successori
+-----------------------------------------------------
+*)
+
+(* move : cell -> int -> cell list -> 'a list *)
+let move c n c_list =
+  let rec aux = function
+      [] -> []
+    | f::rest -> try (f c n c_list)::(aux rest)
+        with UnvalidPosition -> aux rest in
+  aux [move_up_rg; move_rg_up; move_rg_dn; move_dn_rg; move_dn_lf; move_lf_dn; move_lf_up; move_up_lf];;
+
+(* 
+-----------------------------------------------------
+	Definizione della funzione euristica
+-----------------------------------------------------
+*)
+
+(* compute_warnsdorff_weight: cell -> int -> cell list -> int *)
+(* Nel conteggio del peso c'è sempre 1 nodo in più che è quello da cui sono partito *)
+let compute_warnsdorff_weight c n c_list = 
+  let moves = move c n c_list in
+  Weight(c, List.length moves - 1);;
+
+(* warnsdorff_heuristic: cell -> int -> cell list -> int list *)
+let warnsdorff_heuristic c n c_list = 
+  let moves = move c n c_list in
+  List.map (function x -> compute_warnsdorff_weight x n c_list) moves;;
+ 
+(* get_min_weight: weight list -> cell *)
+let get_min_weight wgt_list = 
+  let rec aux w_list max = 
+    match w_list with
+      [] -> max
+    | x::rest -> if x > max 
+        then aux wgt_list x 
+        else aux wgt_list max in 
+  aux [wgt_list] (-1);;
+
+(* 
+-----------------------------------------------------
 	BFS - Breadth  First Search
 -----------------------------------------------------
 *)
@@ -167,6 +209,15 @@ let dfs start n=
 				then List.rev path
 				else search_aux ((extend path n) @ rest)
 in search_aux [[start]];;
+
+let a_star start n =
+  let rec search_aux = function
+		[] -> raise NotFound
+    | path::rest -> 
+			if goal path n
+        then List.rev path
+        else search_aux (rest @ (extend path n))
+  in search_aux [[start]];;
 
 (*
 let main() = 
@@ -210,5 +261,3 @@ let n = 5;;
 print_conditions x y n;;
 let solution = dfs (Cell(x,y)) n;;
 print_path solution;;
-
-wait_for_key;;
