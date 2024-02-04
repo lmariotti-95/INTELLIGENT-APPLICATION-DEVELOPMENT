@@ -2,6 +2,8 @@ type 'a graph = Graph of ('a->'a list);;
 type cell = Cell of (int * int);;
 type weight = Weight of (cell * int);; (* Warnsdorff *)
 
+let g_size = ref 0;;
+
 (* 
 -----------------------------------------------------
 	Definizione delle eccezioni 
@@ -197,10 +199,11 @@ let warnsdorff_heuristic c n c_list =
 	BFS - Breadth  First Search
 -----------------------------------------------------
 *)
+(* extend: cell list -> int -> cell list list *)
 let extend path n = 
-  print_path path; 
+  (*print_path path; *)
 
-	(* 
+	(* Doc OCaml:
 		val map : ('a -> 'b) -> 'a list -> 'b list
 		map f [a1; ...; an] applies function f to a1, ..., an, and builds the list [f a1; ...; f an] with the results returned by f.
 		
@@ -211,7 +214,7 @@ let extend path n =
     (List.filter (function x -> not (List.mem x path)) (move (List.hd path) n (List.tl path)));;
 
 (* 
-	Implementazione dell'algorimo di ricerca in ampiezza;
+	Implementazione dell'algoritmo di ricerca in ampiezza;
 	Prende in ingresso il nodo inziale (in questo caso la cella di partenza) e la dimensione della scacchiera	 
 *)
 let bfs start n =
@@ -247,16 +250,23 @@ in search_aux [[start]];;
 	"The comparison function must return 0 if its arguments compare as equal, a positive integer if the first is greater, and a negative integer if the first is smaller"
 *)
 	let compare_path p1 p2 = 
+		let c1 = List.length (List.filter (function x -> not(List.mem x p1)) (move (List.hd p1) 5 (List.tl p1))) in
+		let c2 = List.length (List.filter (function x -> not(List.mem x p2)) (move (List.hd p2) 5 (List.tl p2))) in
+		if c1 < c2 then -1
+		else if c1 = c2 then 0
+		else 1;;
+		(*
 		let g1 = List.length p1 in
 		let g2 = List.length p2 in
-		let h1 = warnsdorff_heuristic (List.hd p1) 5 p1 in
-		let h2 = warnsdorff_heuristic (List.hd p2) 5 p2 in
+		let h1 = warnsdorff_heuristic (List.hd p1) !g_size p1 in
+		let h2 = warnsdorff_heuristic (List.hd p2) !g_size p2 in
 		let f1 = g1 + h1 in
 		let f2 = g2 + h2 in
 	
 		if f1 > f2 then 1
 		else if f1 < f2 then -1
 		else 0;;
+		*)
 
 (* 
 	Implementazione dell'algorimo di ricerca in A*;
@@ -265,11 +275,11 @@ in search_aux [[start]];;
 *)
 let a_star start n =
   let rec search_aux = function
-		[] -> raise NotFound
+      [] -> raise NotFound
     | path::rest -> 
-			if goal path n
+        if goal path n
         then List.rev path
-				else search_aux (List.sort compare_path (rest @ (extend path n)))
+        else search_aux ((List.sort compare_path (extend path n)) @ rest)
   in search_aux [[start]];;
 
 let print_conditions x y n algo = 
@@ -292,6 +302,8 @@ print_path solution;;
 *)
 
 let solve x y n algo = 
+	g_size := n;
+
 	match algo with 
 	"BFS" -> 
 		let solution = bfs (Cell(x, y)) n in
