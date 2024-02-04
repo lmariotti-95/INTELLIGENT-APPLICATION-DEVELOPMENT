@@ -9,6 +9,7 @@ type weight = Weight of (cell * int);; (* Warnsdorff *)
 *)
 exception UnvalidPosition;;
 exception NotFound;;
+exception UnvalidAlgorithm;;
 
 (* 
 -----------------------------------------------------
@@ -26,8 +27,6 @@ let print_cell_list c_list =
 let print_path path = 
   (*Printf.printf "----\n";*)
   print_cell_list path;;
-
-let wait_for_key = let _ = read_line() in ()
 
 (* 
 -----------------------------------------------------
@@ -125,54 +124,73 @@ goal
 -----------------------------------------------------
 *)
 
-(* move : cell -> int -> cell list -> 'a list *)
+(* move : cell -> int -> cell list -> cell list *)
 let move c n c_list =
 	let rec aux = function
 		[] -> []
 		| f::rest -> try (f c n c_list)::(aux rest)
-				   with UnvalidPosition -> aux rest in
+				with UnvalidPosition -> aux rest in
 aux [move_up_rg; move_rg_up; move_rg_dn; move_dn_rg; move_dn_lf; move_lf_dn; move_lf_up; move_up_lf];;
 
 (* 
 -----------------------------------------------------
-	Definizione della funzione successori
+	Definizione della funzione euristica di Warnsdorff
+	1) Una cella Q è accessibile dalla cella P se può essere raggiunta in 1 mossa e Q non è stata visitata
+	2) S è l'insieme delle celle accessibili da P (Q c S)
+	3) L'accessibilità di P è la cardinalità delle sue celle accessibili cioè |S|
+
+	Data una cella P determino S, per ogni cella in S determino la sua accessibilità.
+	Il valore dell'euristica di Warnsdorff sarà il minimo delle accessibilità in S.
 -----------------------------------------------------
 *)
-
-(* move : cell -> int -> cell list -> 'a list *)
-let move c n c_list =
-  let rec aux = function
-      [] -> []
-    | f::rest -> try (f c n c_list)::(aux rest)
-        with UnvalidPosition -> aux rest in
-  aux [move_up_rg; move_rg_up; move_rg_dn; move_dn_rg; move_dn_lf; move_lf_dn; move_lf_up; move_up_lf];;
 
 (* 
------------------------------------------------------
-	Definizione della funzione euristica
------------------------------------------------------
+	Data una cella determina l'insieme delle celle accessibili (S)
 *)
+(* move : cell -> int -> cell list -> cell list *)
+let get_accessible_cells c n c_list = move c n c_list;;
 
-(* compute_warnsdorff_weight: cell -> int -> cell list -> int *)
-(* Nel conteggio del peso c'è sempre 1 nodo in più che è quello da cui sono partito *)
-let compute_warnsdorff_weight c n c_list = 
-  let moves = move c n c_list in
-  Weight(c, List.length moves - 1);;
+(* 
+	Calcola l'accessibilità di una cella cioè quante celle non visitate può raggiungere
+*)
+(* compute_accessibility: cell -> int -> cell list -> int *)
+let compute_accessibility c n c_list = 
+  let s = get_accessible_cells c n c_list in
+  Weight(c, List.length s - 1);;
 
-(* warnsdorff_heuristic: cell -> int -> cell list -> int list *)
-let warnsdorff_heuristic c n c_list = 
-  let moves = move c n c_list in
-  List.map (function x -> compute_warnsdorff_weight x n c_list) moves;;
- 
+(* 
+	Dati due pesi determina se w1 < w2
+*)
+(* min_weight: weight -> weight -> bool *)
+let min_weight wgt_1 wgt_2 =
+	let Weight(c1, w1) = wgt_1 in 
+	let Weight(c2, w2) = wgt_2 in 
+	w1 < w2;;
+
+(* 
+	Data una lista di pesi determina il peso minore e ne restituisce la cella
+*)
 (* get_min_weight: weight list -> cell *)
 let get_min_weight wgt_list = 
-  let rec aux w_list max = 
-    match w_list with
-      [] -> max
-    | x::rest -> if x > max 
-        then aux wgt_list x 
-        else aux wgt_list max in 
-  aux [wgt_list] (-1);;
+  let minimum = ref (Weight(Cell(0,0), 65535)) in
+  let n = List.length wgt_list in
+  
+  for i = 0 to (n - 1) do 
+    let current_weight = List.nth wgt_list i in
+    if min_weight current_weight !minimum then
+      (
+        minimum := current_weight
+      )
+  done;
+  match !minimum with Weight(c, w) -> w;; 
+	
+(*
+	Data una cella determina i valori di accessibilità di tutte le sue celle accessibili 
+*)
+(* warnsdorff_heuristic: cell -> int -> cell list -> int list *)
+let warnsdorff_heuristic c n c_list = 
+  let s = get_accessible_cells c n c_list in
+  get_min_weight (List.map (function x -> compute_accessibility x n c_list) s);;
 
 (* 
 -----------------------------------------------------
@@ -180,7 +198,7 @@ let get_min_weight wgt_list =
 -----------------------------------------------------
 *)
 let extend path n = 
-  (*print_path path; *)
+  print_path path; 
 
 	(* 
 		val map : ('a -> 'b) -> 'a list -> 'b list
@@ -192,6 +210,10 @@ let extend path n =
   List.map (function x -> x::path)
     (List.filter (function x -> not (List.mem x path)) (move (List.hd path) n (List.tl path)));;
 
+(* 
+	Implementazione dell'algorimo di ricerca in ampiezza;
+	Prende in ingresso il nodo inziale (in questo caso la cella di partenza) e la dimensione della scacchiera	 
+*)
 let bfs start n =
   let rec search_aux = function
 		[] -> raise NotFound
@@ -201,6 +223,10 @@ let bfs start n =
         else search_aux (rest @ (extend path n))
   in search_aux [[start]];;
 
+(* 
+	Implementazione dell'algorimo di ricerca in profondità;
+	Prende in ingresso il nodo inziale (in questo caso la cella di partenza) e la dimensione della scacchiera	 
+*)
 let dfs start n=
 	let rec search_aux = function
 		[] -> raise NotFound
@@ -210,22 +236,84 @@ let dfs start n=
 				else search_aux ((extend path n) @ rest)
 in search_aux [[start]];;
 
+(*
+	Determina il migliore tra due percorsi secondo la logica:
+	f = g + h
+	g = Distanza dal nodo inziziale cioè la lunghezza attuale del cammino
+	h = Valutazione euristica di Warnsdorff
+
+	minimizziamo il valore di f
+
+	"The comparison function must return 0 if its arguments compare as equal, a positive integer if the first is greater, and a negative integer if the first is smaller"
+*)
+	let compare_path p1 p2 = 
+		let g1 = List.length p1 in
+		let g2 = List.length p2 in
+		let h1 = warnsdorff_heuristic (List.hd p1) 5 p1 in
+		let h2 = warnsdorff_heuristic (List.hd p2) 5 p2 in
+		let f1 = g1 + h1 in
+		let f2 = g2 + h2 in
+	
+		if f1 > f2 then 1
+		else if f1 < f2 then -1
+		else 0;;
+
+(* 
+	Implementazione dell'algorimo di ricerca in A*;
+	Implementa l'euristica di Warnsdorff;
+	Prende in ingresso il nodo inziale (in questo caso la cella di partenza) e la dimensione della scacchiera;
+*)
 let a_star start n =
   let rec search_aux = function
 		[] -> raise NotFound
     | path::rest -> 
 			if goal path n
         then List.rev path
-        else search_aux (rest @ (extend path n))
+				else search_aux (List.sort compare_path (rest @ (extend path n)))
   in search_aux [[start]];;
 
+let print_conditions x y n algo = 
+  Printf.printf "Executing %s\n" algo;
+  Printf.printf "Start = (%d,%d)\n" x y;
+  Printf.printf "Size = %d\n" n;;
+
 (*
+let x = 2;;
+let y = 2;;
+let n = 5;;
+
+print_conditions x y n "DFS";;
+let solution = dfs (Cell(x,y)) n;;
+print_path solution;;
+
+print_conditions x y n "A*";;
+let solution = a_star (Cell(x,y)) n;;
+print_path solution;;
+*)
+
+let solve x y n algo = 
+	match algo with 
+	"BFS" -> 
+		let solution = bfs (Cell(x, y)) n in
+		Printf.printf("Solution:\n");
+		print_path solution;
+	|"DFS" -> 
+		let solution = dfs (Cell(x, y)) n in
+		Printf.printf("Solution:\n");
+		print_path solution;
+	|"A_STAR" -> 
+		let solution = a_star (Cell(x, y)) n in
+		Printf.printf("Solution:\n");
+		print_path solution;
+	|_ -> 
+		Printf.printf "Unvalid algorithm\n";
+		raise UnvalidAlgorithm;;
+
 let main() = 
 	let num_args = Array.length Sys.argv in
-	if num_args < 3 then
+	if num_args < 4 then
 	(
 		Printf.printf "Unvalid args number\n";
-		wait_for_key,
 		exit 1
 	)
 	else
@@ -233,31 +321,15 @@ let main() =
 		let x = int_of_string Sys.argv.(1) in
 		let y = int_of_string Sys.argv.(2) in
 		let n = int_of_string Sys.argv.(3) in
+		let algo = Sys.argv.(4) in
 
-		let c = Cell(x, y) in
-
-		Printf.printf "Executing DFS\n";
-		Printf.printf "Start = (%d,%d)\n" x y;
-		Printf.printf "Size = %d\n" n;
-
-		let solution = dfs c n in
-		(* bfs (Cell(2,2)) 5;; *)
-		print_path solution;
-		wait_for_key,
-		exit 0
+		print_conditions x y n algo;
+		
+		try
+			solve x y n algo;
+			Printf.printf "Done";
+			exit 0
+		with UnvalidAlgorithm -> exit 1
 	)
-	*)
-(* let _ = main();; *)
 
-let print_conditions x y n = 
-	Printf.printf "Executing DFS\n";
-	Printf.printf "Start = (%d,%d)\n" x y;
-	Printf.printf "Size = %d\n" n;;
-
-let x = 2;;
-let y = 2;;
-let n = 5;;
-
-print_conditions x y n;;
-let solution = dfs (Cell(x,y)) n;;
-print_path solution;;
+let _ = main();; 

@@ -23,7 +23,7 @@ y = Coordinata Y della cella iniziale
 n = Dimensione della scacchiera NxN
 
 ## Implementazioni
-- [ ] Gestione degli argomenti in ingresso all'esecuzione
+- [x] Gestione degli argomenti in ingresso all'esecuzione
 - [x] BFS - Breadth-first search;
 - [x] DFS - Depth-first search;
 - [ ] A*  - Ricerca euristica implementando **Warnsdorf's rule**;
