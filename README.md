@@ -26,4 +26,7 @@ n = Dimensione della scacchiera NxN
 - [x] Gestione degli argomenti in ingresso all'esecuzione
 - [x] BFS - Breadth-first search;
 - [x] DFS - Depth-first search;
-- [ ] A*  - Ricerca euristica implementando **Warnsdorf's rule**;
+- [x] Hill-Climbing - Ricerca euristica implementando **Warnsdorf's rule**;
+
+## Gui
+Implementata un'interfaccia utente visualizzare il percorso calcolato dal programma;

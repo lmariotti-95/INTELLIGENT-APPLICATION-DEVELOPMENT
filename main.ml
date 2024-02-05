@@ -1,6 +1,5 @@
 type 'a graph = Graph of ('a->'a list);;
 type cell = Cell of (int * int);;
-type weight = Weight of (cell * int);; (* Warnsdorff *)
 
 let g_size = ref 0;;
 
@@ -136,66 +135,6 @@ aux [move_up_rg; move_rg_up; move_rg_dn; move_dn_rg; move_dn_lf; move_lf_dn; mov
 
 (* 
 -----------------------------------------------------
-	Definizione della funzione euristica di Warnsdorff
-	1) Una cella Q è accessibile dalla cella P se può essere raggiunta in 1 mossa e Q non è stata visitata
-	2) S è l'insieme delle celle accessibili da P (Q c S)
-	3) L'accessibilità di P è la cardinalità delle sue celle accessibili cioè |S|
-
-	Data una cella P determino S, per ogni cella in S determino la sua accessibilità.
-	Il valore dell'euristica di Warnsdorff sarà il minimo delle accessibilità in S.
------------------------------------------------------
-*)
-
-(* 
-	Data una cella determina l'insieme delle celle accessibili (S)
-*)
-(* move : cell -> int -> cell list -> cell list *)
-let get_accessible_cells c n c_list = move c n c_list;;
-
-(* 
-	Calcola l'accessibilità di una cella cioè quante celle non visitate può raggiungere
-*)
-(* compute_accessibility: cell -> int -> cell list -> int *)
-let compute_accessibility c n c_list = 
-  let s = get_accessible_cells c n c_list in
-  Weight(c, List.length s - 1);;
-
-(* 
-	Dati due pesi determina se w1 < w2
-*)
-(* min_weight: weight -> weight -> bool *)
-let min_weight wgt_1 wgt_2 =
-	let Weight(c1, w1) = wgt_1 in 
-	let Weight(c2, w2) = wgt_2 in 
-	w1 < w2;;
-
-(* 
-	Data una lista di pesi determina il peso minore e ne restituisce la cella
-*)
-(* get_min_weight: weight list -> cell *)
-let get_min_weight wgt_list = 
-  let minimum = ref (Weight(Cell(0,0), 65535)) in
-  let n = List.length wgt_list in
-  
-  for i = 0 to (n - 1) do 
-    let current_weight = List.nth wgt_list i in
-    if min_weight current_weight !minimum then
-      (
-        minimum := current_weight
-      )
-  done;
-  match !minimum with Weight(c, w) -> w;; 
-	
-(*
-	Data una cella determina i valori di accessibilità di tutte le sue celle accessibili 
-*)
-(* warnsdorff_heuristic: cell -> int -> cell list -> int list *)
-let warnsdorff_heuristic c n c_list = 
-  let s = get_accessible_cells c n c_list in
-  get_min_weight (List.map (function x -> compute_accessibility x n c_list) s);;
-
-(* 
------------------------------------------------------
 	BFS - Breadth  First Search
 -----------------------------------------------------
 *)
@@ -239,41 +178,34 @@ let dfs start n=
 				else search_aux ((extend path n) @ rest)
 in search_aux [[start]];;
 
+(* Dato un cammino determina il numero dei successori *)
+(* warnsdorff_heuristic: cell list -> int *)
+let warnsdorff_heuristic path = List.length (List.filter (function x -> not(List.mem x path)) (move (List.hd path) !g_size (List.tl path)));;
+
 (*
 	Determina il migliore tra due percorsi secondo la logica:
-	f = g + h
-	g = Distanza dal nodo inziziale cioè la lunghezza attuale del cammino
-	h = Valutazione euristica di Warnsdorff
-
-	minimizziamo il valore di f
-
-	"The comparison function must return 0 if its arguments compare as equal, a positive integer if the first is greater, and a negative integer if the first is smaller"
+	Il percorso con meno successori è da preferirsi
 *)
+(* compare_path: cell list -> cell list -> int *)
 	let compare_path p1 p2 = 
-		let c1 = List.length (List.filter (function x -> not(List.mem x p1)) (move (List.hd p1) 5 (List.tl p1))) in
-		let c2 = List.length (List.filter (function x -> not(List.mem x p2)) (move (List.hd p2) 5 (List.tl p2))) in
-		if c1 < c2 then -1
-		else if c1 = c2 then 0
-		else 1;;
-		(*
-		let g1 = List.length p1 in
-		let g2 = List.length p2 in
-		let h1 = warnsdorff_heuristic (List.hd p1) !g_size p1 in
-		let h2 = warnsdorff_heuristic (List.hd p2) !g_size p2 in
-		let f1 = g1 + h1 in
-		let f2 = g2 + h2 in
-	
-		if f1 > f2 then 1
-		else if f1 < f2 then -1
-		else 0;;
+		let c1 = (warnsdorff_heuristic p1) in
+		let c2 = (warnsdorff_heuristic p2) in
+
+		(* 
+			OCaml doc: The comparison function must return 0 if its arguments compare as equal, 
+			a positive integer if the first is greater, and a negative integer if the first is smaller 
 		*)
+		if c1 = c2 then 0
+		else if c1 > c2 then 1
+		else -1;;
 
 (* 
-	Implementazione dell'algorimo di ricerca in A*;
-	Implementa l'euristica di Warnsdorff;
+	Implementazione dell'algorimo di ricerca Hill-climbing;
+	Ad ogni passo viene espansa la soluzione parziale generata al passo
+  precedente più promettente implementando l'euristica di Warnsdorff;
 	Prende in ingresso il nodo inziale (in questo caso la cella di partenza) e la dimensione della scacchiera;
 *)
-let a_star start n =
+let hill_climbing start n =
   let rec search_aux = function
       [] -> raise NotFound
     | path::rest -> 
@@ -313,8 +245,8 @@ let solve x y n algo =
 		let solution = dfs (Cell(x, y)) n in
 		Printf.printf("Solution:\n");
 		print_path solution;
-	|"A_STAR" -> 
-		let solution = a_star (Cell(x, y)) n in
+	|"HILL_CLIMBING" -> 
+		let solution = hill_climbing (Cell(x, y)) n in
 		Printf.printf("Solution:\n");
 		print_path solution;
 	|_ -> 

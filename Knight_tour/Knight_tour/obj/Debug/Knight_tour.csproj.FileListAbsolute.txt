@@ -1,0 +1,10 @@
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\bin\Debug\Knight_tour.exe.config
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\bin\Debug\Knight_tour.exe
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\bin\Debug\Knight_tour.pdb
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\obj\Debug\Knight_tour.csproj.AssemblyReference.cache
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\obj\Debug\Knight_tour.MainGui.resources
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\obj\Debug\Knight_tour.Properties.Resources.resources
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\obj\Debug\Knight_tour.csproj.GenerateResource.cache
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\obj\Debug\Knight_tour.csproj.CoreCompileInputs.cache
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\obj\Debug\Knight_tour.exe
+C:\Users\Lorenzo\source\repos\Knight_tour\Knight_tour\obj\Debug\Knight_tour.pdb
