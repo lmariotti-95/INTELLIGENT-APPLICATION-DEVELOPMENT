@@ -11,6 +11,7 @@ let g_size = ref 0;;
 exception UnvalidPosition;;
 exception NotFound;;
 exception UnvalidAlgorithm;;
+exception Invalid_argument;;
 
 (* 
 -----------------------------------------------------
@@ -18,15 +19,17 @@ exception UnvalidAlgorithm;;
 -----------------------------------------------------
 *)
 
+(* cell -> string *)
 let string_of_cell (Cell (x, y)) =
   Printf.sprintf "(%d, %d)" x y;;
 
+(* cell list -> unit *)
 let print_cell_list c_list =
   let string_list = List.map string_of_cell c_list in
   Printf.printf "[%s]\n" (String.concat "; " string_list);;
 
+(* cell list -> unit *)
 let print_path path = 
-  (*Printf.printf "----\n";*)
   print_cell_list path;;
 
 (* 
@@ -108,17 +111,6 @@ let rec has_duplicate lst =
 (* goal : cell list -> int -> bool *)
 let goal c_list n = List.length c_list = (n * n) && not (has_duplicate c_list);;
 
-(*
-goal 
-[
-  Cell(0,0);Cell(0,1);Cell(0,2);
-  Cell(1,0);Cell(1,0);Cell(1,2);
-  Cell(2,0);Cell(2,1);Cell(2,2);
-] 3;;
-
-(* -:bool = true *)
-*)
-
 (* 
 -----------------------------------------------------
 	Definizione della funzione successori
@@ -133,6 +125,11 @@ let move c n c_list =
 				with UnvalidPosition -> aux rest in
 aux [move_up_rg; move_rg_up; move_rg_dn; move_dn_rg; move_dn_lf; move_lf_dn; move_lf_up; move_up_lf];;
 
+(* is_closed : cell list -> int -> bool *)
+let is_closed c_list n = 
+	let last = List.nth c_list ((List.length c_list) - 1) in
+	List.mem last (move (List.hd c_list) n (List.tl c_list));;
+
 (* 
 -----------------------------------------------------
 	BFS - Breadth  First Search
@@ -140,7 +137,7 @@ aux [move_up_rg; move_rg_up; move_rg_dn; move_dn_rg; move_dn_lf; move_lf_dn; mov
 *)
 (* extend: cell list -> int -> cell list list *)
 let extend path n = 
-  (*print_path path; *)
+	(*print_path path; *) 
 
 	(* Doc OCaml:
 		val map : ('a -> 'b) -> 'a list -> 'b list
@@ -175,7 +172,7 @@ let dfs start n=
 		| path::rest -> 
 			if goal path n
 				then List.rev path
-				else search_aux ((extend path n) @ rest)
+			else search_aux ((extend path n) @ rest)
 in search_aux [[start]];;
 
 (* Dato un cammino determina il numero dei successori *)
@@ -234,46 +231,58 @@ print_path solution;;
 *)
 
 let solve x y n algo = 
+	(* Mi assicuro della coerenza dei parametri *)
+	assert(n > 0);
+	assert(x >= 0 && x < n);
+	assert(y >= 0 && y < n);
+
+	let aviable_algos = ["BFS"; "DFS"; "HILL_CLIMBING"] in
+	assert(List.mem algo aviable_algos);
+
 	g_size := n;
+
+	print_conditions x y n algo;
 
 	match algo with 
 	"BFS" -> 
 		let solution = bfs (Cell(x, y)) n in
+
 		Printf.printf("Solution:\n");
 		print_path solution;
+		if is_closed solution n then Printf.printf("Closed!:\n");
+
 	|"DFS" -> 
 		let solution = dfs (Cell(x, y)) n in
+
 		Printf.printf("Solution:\n");
 		print_path solution;
+		if is_closed solution n then Printf.printf("Closed!:\n");
+
 	|"HILL_CLIMBING" -> 
 		let solution = hill_climbing (Cell(x, y)) n in
+
 		Printf.printf("Solution:\n");
 		print_path solution;
+		if is_closed solution n then Printf.printf("Closed!:\n");
+
 	|_ -> 
 		Printf.printf "Unvalid algorithm\n";
 		raise UnvalidAlgorithm;;
 
-let main() = 
-	let num_args = Array.length Sys.argv in
-	if num_args < 4 then
-	(
-		Printf.printf "Unvalid args number\n";
-		exit 1
-	)
-	else
-	(
-		let x = int_of_string Sys.argv.(1) in
-		let y = int_of_string Sys.argv.(2) in
-		let n = int_of_string Sys.argv.(3) in
-		let algo = Sys.argv.(4) in
+(*
+	Inizio programma
+*)
+let num_args = Array.length Sys.argv in
 
-		print_conditions x y n algo;
-		
-		try
-			solve x y n algo;
-			Printf.printf "Done";
-			exit 0
-		with UnvalidAlgorithm -> exit 1
-	)
+(* Esempio: main.exe 0 0 5 BFS *)
+assert (num_args = 5);
 
-let _ = main();; 
+let x = int_of_string Sys.argv.(1) in
+let y = int_of_string Sys.argv.(2) in
+let n = int_of_string Sys.argv.(3) in
+let algo = Sys.argv.(4) in
+
+try
+	solve x y n algo;
+	Printf.printf "Done";
+with UnvalidAlgorithm -> exit 1;;
