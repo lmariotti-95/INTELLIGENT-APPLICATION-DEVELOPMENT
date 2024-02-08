@@ -8,6 +8,7 @@ using System.Security.Policy;
 using System.Text;
 using System.IO;
 using System.Windows.Forms;
+using System.Reflection;
 
 namespace Knight_tour
 {
@@ -43,9 +44,9 @@ namespace Knight_tour
             return lbl;
         }
 
-        private Panel GetBoardPanel(Color c)
+        private PictureBox GetBoardCell(Color c)
         {
-            Panel panel = new Panel
+            PictureBox panel = new PictureBox
             {
                 BackColor = c,
                 Dock = DockStyle.Fill,
@@ -66,6 +67,8 @@ namespace Knight_tour
             chessBoard.SuspendLayout();
             chessBoard.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
             chessBoard.Controls.Clear();
+            chessBoard.ColumnStyles.Clear();
+            chessBoard.RowStyles.Clear();
 
             size++;
 
@@ -74,30 +77,35 @@ namespace Knight_tour
 
             for (int i = 0; i < size; i++)
             {
-                chessBoard.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
+                chessBoard.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
                 for (int j = 0; j < size; j++)
                 {
-                    chessBoard.RowStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
+                   chessBoard.RowStyles.Add(new RowStyle(SizeType.AutoSize));
                 }
             }
 
+            int outSize = Math.Min(mainPanel.Height, mainPanel.Width);
+            outSize = Convert.ToInt32((double)outSize * 0.8);
+            Size cellSize = new Size(outSize / size, outSize / size);
+
             for (int i = 1; i < size; i++)
             {
-                chessBoard.Controls.Add(GetBoardCellLabel(i - 1), i, 0);
-                chessBoard.Controls.Add(GetBoardCellLabel(i - 1), 0, i);
-            }
+                var lbl = GetBoardCellLabel(i - 1);
+                lbl.Size = cellSize;
+                chessBoard.Controls.Add(lbl, i, 0);
 
-            int outSize = Math.Min(mainPanel.Height, mainPanel.Width);
-            outSize = Convert.ToInt32((double)outSize * 0.4);
-            Size cellSize = new Size(outSize / size, outSize / size);
+                lbl = GetBoardCellLabel(i - 1);
+                lbl.Size = cellSize;
+                chessBoard.Controls.Add(lbl, 0, i);
+            }
 
             Color color = UserColor.cellGreen;
             for (int i = 1; i < size; i++)
             {
                 for (int j = 1; j < size; j++)
                 {
-                    Panel p = GetBoardPanel(color);
+                    var p = GetBoardCell(color);
                     p.Size = cellSize;
                     chessBoard.Controls.Add(p, i, j);
 
@@ -108,20 +116,21 @@ namespace Knight_tour
                     color = (color == UserColor.cellWhite) ? UserColor.cellGreen : UserColor.cellWhite;
             }
 
+            chessBoard.Size = new Size(500, 500);
             chessBoard.ResumeLayout();
             chessBoard.Visible = true;
         }
 
         private void ClearKnight(Point pnt)
         {
-            Panel panel = (Panel)chessBoard.GetControlFromPosition(pnt.X + 1, pnt.Y + 1);
-            panel.BackgroundImage = Properties.Resources.visited; 
+            Control ctrl = chessBoard.GetControlFromPosition(pnt.X + 1, pnt.Y + 1);
+            ctrl.BackgroundImage = Properties.Resources.visited; 
         }
 
         private void PositionKnight(Point pnt)
         {
-            Panel panel = (Panel)chessBoard.GetControlFromPosition(pnt.X + 1, pnt.Y + 1);
-            panel.BackgroundImage = Properties.Resources.knight;
+            Control ctrl = chessBoard.GetControlFromPosition(pnt.X + 1, pnt.Y + 1);
+            ctrl.BackgroundImage = Properties.Resources.knight;
         }
 
         private void SetPathFromFile(string fileName, List<Point> tour)
@@ -320,6 +329,7 @@ namespace Knight_tour
             spd -= 100;
             if (spd < 10)
                 spd = 10;
+
             refreshTimer.Interval = spd;
         }
 
@@ -332,6 +342,17 @@ namespace Knight_tour
                 spd = 1000;
 
             refreshTimer.Interval = spd;
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Version version = Assembly.GetEntryAssembly().GetName().Version;
+            MessageBox.Show($"Version: {version}", "About", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }
