@@ -14,7 +14,10 @@ namespace Knight_tour
 {
     public partial class MainGui : Form
     {
-        List<Point> memKnightTour = new List<Point>();
+        List<List<Point>> allTours = new List<List<Point>>();
+        int current_tour = 0;
+
+        List <Point> memKnightTour = new List<Point>();
         List<Point> knightTour = new List<Point>();
 
         public MainGui()
@@ -121,6 +124,14 @@ namespace Knight_tour
             chessBoard.Visible = true;
         }
 
+        private void ResetBoard()
+        {
+            foreach(Control ctrl in chessBoard.Controls)
+            {
+                ctrl.BackgroundImage = null;
+            }
+        }
+
         private void ClearKnight(Point pnt)
         {
             Control ctrl = chessBoard.GetControlFromPosition(pnt.X + 1, pnt.Y + 1);
@@ -133,44 +144,80 @@ namespace Knight_tour
             ctrl.BackgroundImage = Properties.Resources.knight;
         }
 
-        private void SetPathFromFile(string fileName, List<Point> tour)
+        private void SetTourFromLine(string line, List<Point> tour)
+        {
+            tour.Clear();
+
+            string[] steps = line.Split(';');
+            foreach (string step in steps)
+            {
+                step.Replace(' ', (char)0);
+
+                int i = step.IndexOf('(') + 1;
+                int j = step.IndexOf(')');
+
+                string[] values = step.Substring(i, j - i).Split(',');
+
+                try
+                {
+                    int x = Convert.ToInt32(values[0]);
+                    int y = Convert.ToInt32(values[1]);
+
+                    tour.Add(new Point(x, y));
+                }
+                catch (FormatException exc)
+                {
+                    MessageBox.Show(exc.Message);
+                }
+                catch (IndexOutOfRangeException exc)
+                {
+                    MessageBox.Show(exc.Message);
+                }
+            }
+        }
+
+        private void SetPathFromFile(string fileName)
         {
             try
             {
-                string strPath = File.ReadAllText(fileName);
-                tour.Clear();
+                string[] strTour = File.ReadAllLines(fileName);
 
-                string[] steps = strPath.Split(';');
-                foreach (string step in steps)
+                allTours.Clear();
+
+                foreach(string line in strTour)
                 {
-                    step.Replace(' ', (char)0);
+                    List<Point> t = new List<Point>();
+                    SetTourFromLine(line, t);
+                    allTours.Add(t);
+                }
 
-                    int i = step.IndexOf('(') + 1;
-                    int j = step.IndexOf(')');
+                if(allTours.Count > 0)
+                {
+                    current_tour = 0;
+                    knightTour = new List<Point>(allTours[0]);
+                    memKnightTour = new List<Point>(allTours[0]);
 
-                    string[] values = step.Substring(i, j - i).Split(',');
-
-                    try
-                    {
-                        int x = Convert.ToInt32(values[0]);
-                        int y = Convert.ToInt32(values[1]);
-
-                        tour.Add(new Point(x, y));
-                    }
-                    catch (FormatException exc)
-                    {
-                        MessageBox.Show(exc.Message);
-                    }
-                    catch (IndexOutOfRangeException exc)
-                    {
-                        MessageBox.Show(exc.Message);
-                    }
+                    //knightTour = mergeAllTours();
+                    //memKnightTour = new List<Point>(knightTour);
                 }
             }
             catch (IOException exc)
             {
                 MessageBox.Show(exc.Message);
             }
+        }
+
+        private int GetBoardSize()
+        {
+            int max = 0;
+            foreach(var t in allTours)
+            {
+                int k = GetBoardSize(t);
+                if(k > max)
+                    max = k;
+            }
+
+            return max;
         }
 
         private int GetBoardSize(List<Point> tour)
@@ -198,6 +245,19 @@ namespace Knight_tour
                 PositionKnight(tour[0]);
 
                 UpdateStepLabel();
+            }
+            else
+            {
+                if(allTours.Count > (current_tour + 1))
+                {
+                    current_tour++;
+                    knightTour = new List<Point>(allTours[current_tour]);
+                    memKnightTour = new List<Point>(allTours[current_tour]);
+
+                    ResetBoard();
+                    PositionKnight(knightTour[0]);
+                    UpdateStepLabel();
+                }
             }
         }
 
@@ -243,7 +303,7 @@ namespace Knight_tour
                 return;
 
             knightTour = new List<Point>(memKnightTour);
-            CreateBoard(GetBoardSize(knightTour));
+            ResetBoard();
             PositionKnight(knightTour[0]);
             UpdateStepLabel();
         }
@@ -254,8 +314,8 @@ namespace Knight_tour
 
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                SetPathFromFile(openFileDialog.FileName, knightTour);
-                CreateBoard(GetBoardSize(knightTour));
+                SetPathFromFile(openFileDialog.FileName);
+                CreateBoard(GetBoardSize());
                 PositionKnight(knightTour[0]);
 
                 memKnightTour = new List<Point>(knightTour);
@@ -271,7 +331,7 @@ namespace Knight_tour
 
         private void refreshTimer_Tick(object sender, EventArgs e)
         {
-            if(knightTour.Count <= 1)
+            if ((current_tour == allTours.Count - 1) && knightTour.Count <= 1)
             {
                 refreshTimer.Stop();
             }
@@ -353,6 +413,38 @@ namespace Knight_tour
         {
             Version version = Assembly.GetEntryAssembly().GetName().Version;
             MessageBox.Show($"Version: {version}", "About", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private List<Point> mergeAllTours()
+        {
+            List<Point> ans = new List<Point>();
+            if (allTours.Count > 0) 
+            {
+                ans = new List<Point>(allTours[0]);
+
+                for (int i = 1; i < allTours.Count; i++)
+                {
+                    int m = allTours[i].Count;
+                    int n = (i > 0) ? allTours[i - 1].Count : ans.Count;
+
+                    if (m > n)
+                    {
+                        ans.AddRange(allTours[i].GetRange(n, (m - n)));
+                    }
+                    else
+                    {
+                        int j = 0;
+
+                        while (j < m && j < n && allTours[i-1][j] == allTours[i][j])
+                            j++;
+
+                        ans.AddRange(allTours[i].GetRange(j, (m - j)));
+                    }
+                }
+            }
+
+
+            return ans;
         }
     }
 }

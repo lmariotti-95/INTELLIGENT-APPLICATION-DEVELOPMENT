@@ -2,6 +2,7 @@ type 'a graph = Graph of ('a->'a list);;
 type cell = Cell of (int * int);;
 
 let g_size = ref 0;;
+let explored_path = ref [];;
 
 (* 
 -----------------------------------------------------
@@ -137,7 +138,10 @@ let is_closed c_list n =
 *)
 (* extend: cell list -> int -> cell list list *)
 let extend path n = 
-	(*print_path path; *) 
+	explored_path := path;
+	print_path (List.rev !explored_path);
+
+	(*print_path path; *)
 
 	(* Doc OCaml:
 		val map : ('a -> 'b) -> 'a list -> 'b list
