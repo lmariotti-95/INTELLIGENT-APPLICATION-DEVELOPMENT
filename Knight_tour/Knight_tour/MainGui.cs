@@ -194,11 +194,14 @@ namespace Knight_tour
                 if(allTours.Count > 0)
                 {
                     current_tour = 0;
-                    knightTour = new List<Point>(allTours[0]);
-                    memKnightTour = new List<Point>(allTours[0]);
+                    //knightTour = new List<Point>(allTours[0]);
+                    //memKnightTour = new List<Point>(allTours[0]);
 
-                    //knightTour = mergeAllTours();
-                    //memKnightTour = new List<Point>(knightTour);
+                    knightTour = mergeAllTours();
+                    memKnightTour = new List<Point>(knightTour);
+
+                    allTours.Clear();
+                    allTours.Add(knightTour);
                 }
             }
             catch (IOException exc)
@@ -438,6 +441,7 @@ namespace Knight_tour
                         while (j < m && j < n && allTours[i-1][j] == allTours[i][j])
                             j++;
 
+                        ans.Add(allTours[i][j - 1]);
                         ans.AddRange(allTours[i].GetRange(j, (m - j)));
                     }
                 }
